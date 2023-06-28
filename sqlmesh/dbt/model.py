@@ -113,7 +113,7 @@ class ModelConfig(BaseModelConfig):
         raise ConfigError(f"Invalid format for partition_by '{v}'")
 
     _FIELD_UPDATE_STRATEGY: t.ClassVar[t.Dict[str, UpdateStrategy]] = {
-        **BaseModelConfig._FIELD_UPDATE_STRATEGY.default,
+        **BaseModelConfig._FIELD_UPDATE_STRATEGY,
         **{
             "sql": UpdateStrategy.IMMUTABLE,
             "time_column": UpdateStrategy.IMMUTABLE,

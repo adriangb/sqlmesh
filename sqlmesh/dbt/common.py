@@ -122,7 +122,7 @@ class GeneralConfig(DbtConfig):
         return parse_meta(v)
 
     _FIELD_UPDATE_STRATEGY: t.ClassVar[t.Dict[str, UpdateStrategy]] = {
-        **BaseConfig._FIELD_UPDATE_STRATEGY.default,
+        **BaseConfig._FIELD_UPDATE_STRATEGY,
         **{
             "tests": UpdateStrategy.KEY_UPDATE,
             "docs": UpdateStrategy.KEY_UPDATE,
