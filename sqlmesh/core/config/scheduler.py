@@ -4,7 +4,7 @@ import abc
 import sys
 import typing as t
 
-from pydantic import Field, root_validator
+from pydantic import ConfigDict, Field, model_validator
 from requests import Session
 
 from sqlmesh.core.config.base import BaseConfig
@@ -169,10 +169,7 @@ class CloudComposerSchedulerConfig(_BaseAirflowSchedulerConfig, BaseConfig):
     type_: Literal["cloud_composer"] = Field(alias="type", default="cloud_composer")
 
     _concurrent_tasks_validator = concurrent_tasks_validator
-
-    class Config:
-        # See `check_supported_fields` for the supported extra fields
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     def __init__(self, **data: t.Any) -> None:
         super().__init__(**data)
@@ -197,9 +194,10 @@ class CloudComposerSchedulerConfig(_BaseAirflowSchedulerConfig, BaseConfig):
             console=console,
         )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def check_supported_fields(cls, values: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
-        allowed_field_names = {field.alias for field in cls.__fields__.values()}
+        allowed_field_names = {field.alias for field in cls.model_fields.values()}
         allowed_field_names.add("session")
 
         for field_name in values:

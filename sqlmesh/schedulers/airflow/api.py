@@ -37,7 +37,7 @@ def check_authentication(func: t.Callable) -> t.Callable:
 @check_authentication
 def apply_plan() -> Response:
     try:
-        plan = common.PlanApplicationRequest.parse_obj(request.json or {})
+        plan = common.PlanApplicationRequest.model_validate(request.json or {})
         with util.scoped_state_sync() as state_sync:
             spec = create_plan_dag_spec(plan, state_sync)
     except Exception as ex:
@@ -154,7 +154,7 @@ def _snapshot_ids_from_request() -> t.Optional[t.List[SnapshotId]]:
         return None
 
     raw_ids = json.loads(request.args["ids"])
-    return [SnapshotId.parse_obj(i) for i in raw_ids]
+    return [SnapshotId.model_validate(i) for i in raw_ids]
 
 
 def _snapshot_name_versions_from_request() -> t.Optional[t.List[SnapshotNameVersion]]:
@@ -162,7 +162,7 @@ def _snapshot_name_versions_from_request() -> t.Optional[t.List[SnapshotNameVers
         return None
 
     raw_versions = json.loads(request.args["versions"])
-    return [SnapshotNameVersion.parse_obj(v) for v in raw_versions]
+    return [SnapshotNameVersion.model_validate(v) for v in raw_versions]
 
 
 def _csv_arg(arg: str) -> t.List[str]:

@@ -4,7 +4,7 @@ import enum
 import pathlib
 import typing as t
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict, validator
 from sqlglot import exp
 
 from sqlmesh.core.context_diff import ContextDiff
@@ -74,10 +74,14 @@ class ChangeDirect(BaseModel):
     indirect: t.List[str] = []
     change_category: t.Optional[SnapshotChangeCategory] = None
 
+    model_config = ConfigDict(protected_namespaces=())
+
 
 class ChangeIndirect(BaseModel):
     model_name: str
     direct: t.List[str] = []
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class ModelsDiff(BaseModel):
@@ -152,6 +156,8 @@ class ContextEnvironmentBackfill(BaseModel):
     view_name: str
     interval: t.Tuple[str, str]
     batches: int
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class ContextEnvironment(BaseModel):

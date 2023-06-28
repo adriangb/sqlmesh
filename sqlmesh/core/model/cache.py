@@ -8,12 +8,12 @@ from sqlglot import exp
 from sqlmesh.core.model.definition import Model, SqlModel
 from sqlmesh.utils.cache import FileCache
 from sqlmesh.utils.hashing import crc32
-from sqlmesh.utils.pydantic import PydanticModel
+from sqlmesh.utils.pydantic import Expression, PydanticModel
 
 
 class SqlModelCacheEntry(PydanticModel):
     model: SqlModel
-    rendered_query: t.Optional[exp.Expression]
+    rendered_query: t.Optional[Expression]
 
 
 class ModelCache:
@@ -60,7 +60,7 @@ class ModelCache:
 
 
 class OptimizedQueryCacheEntry(PydanticModel):
-    optimized_rendered_query: exp.Expression
+    optimized_rendered_query: Expression
 
 
 class OptimizedQueryCache:

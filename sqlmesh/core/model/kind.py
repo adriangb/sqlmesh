@@ -3,8 +3,12 @@ from __future__ import annotations
 import typing as t
 from enum import Enum
 
-from pydantic import Field, root_validator, validator
-from pydantic.fields import ModelField
+from pydantic import (
+    FieldValidationInfo,
+    field_validator as pydantic_field_validator,
+    model_validator,
+)
+from typing_extensions import Literal, Self
 from sqlglot import exp
 from sqlglot.time import format_time
 
@@ -83,7 +87,10 @@ class ModelKind(PydanticModel, ModelKindMixin):
 
     @classmethod
     def field_validator(cls) -> classmethod:
-        def _model_kind_validator(v: t.Any) -> ModelKind:
+        def _model_kind_validator(cls, v: t.Any) -> ModelKind | None:
+            if v is None:
+                return None
+
             if isinstance(v, ModelKind):
                 return v
 
@@ -123,7 +130,7 @@ class ModelKind(PydanticModel, ModelKindMixin):
             except ValueError:
                 raise ConfigError(f"Invalid model kind '{name}'")
 
-        return validator("kind", pre=True, allow_reuse=True)(_model_kind_validator)
+        return pydantic_field_validator("kind", mode='before')(classmethod(_model_kind_validator))
 
     @property
     def model_kind_name(self) -> ModelKindName:
@@ -139,7 +146,7 @@ class TimeColumn(PydanticModel):
 
     @classmethod
     def field_validator(cls) -> classmethod:
-        def _time_column_validator(v: t.Any) -> TimeColumn:
+        def _time_column_validator(cls, v: t.Any) -> TimeColumn:
             if isinstance(v, exp.Tuple):
                 kwargs = {
                     key: v.expressions[i].name
@@ -157,9 +164,10 @@ class TimeColumn(PydanticModel):
                 return TimeColumn(column=v)
             return v
 
-        return validator("time_column", pre=True, allow_reuse=True)(_time_column_validator)
+        return pydantic_field_validator("time_column", mode='before')(_time_column_validator)
 
-    @validator("column", pre=True)
+    @pydantic_field_validator("column", mode="before")
+    @classmethod
     def _column_validator(cls, v: str) -> str:
         if not v:
             raise ConfigError("Time Column cannot be empty.")
@@ -194,32 +202,33 @@ class TimeColumn(PydanticModel):
 
 
 class _Incremental(ModelKind):
-    batch_size: t.Optional[int]
-    lookback: t.Optional[int]
+    batch_size: t.Optional[int] = None
+    lookback: t.Optional[int] = None
 
-    @validator("batch_size", "lookback", pre=True)
-    def _int_validator(cls, v: t.Any, field: ModelField) -> t.Optional[int]:
-        if isinstance(v, exp.Expression):
+    @pydantic_field_validator("batch_size", "lookback", mode="before")
+    @classmethod
+    def _int_validator(cls, v: t.Any, info: FieldValidationInfo) -> t.Optional[int]:
+        if v is None:
+            return None
+        elif isinstance(v, exp.Expression):
             num = int(v.name)
         else:
             num = int(v)
         if num < 0:
             raise ConfigError(
-                f"Invalid value {num} for {field.name}. The value should be greater than 0"
+                f"Invalid value {num} for {info.field_name}. The value should be greater than 0"
             )
         return num
 
-    @root_validator
-    def _kind_validator(cls, values: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
-        batch_size = values.get("batch_size")
-        lookback = values.get("lookback") or 0
-        if batch_size and batch_size < lookback:
+    @model_validator(mode="after")
+    def _kind_validator(self: Self) -> Self:
+        if self.batch_size and self.lookback and self.batch_size < self.lookback:
             raise ValueError("batch_size cannot be less than lookback")
-        return values
+        return self
 
 
 class IncrementalByTimeRangeKind(_Incremental):
-    name: ModelKindName = Field(ModelKindName.INCREMENTAL_BY_TIME_RANGE, const=True)
+    name: Literal[ModelKindName.INCREMENTAL_BY_TIME_RANGE] = ModelKindName.INCREMENTAL_BY_TIME_RANGE
     time_column: TimeColumn
 
     _time_column_validator = TimeColumn.field_validator()
@@ -229,10 +238,10 @@ class IncrementalByTimeRangeKind(_Incremental):
 
 
 class IncrementalByUniqueKeyKind(_Incremental):
-    name: ModelKindName = Field(ModelKindName.INCREMENTAL_BY_UNIQUE_KEY, const=True)
+    name: Literal[ModelKindName.INCREMENTAL_BY_UNIQUE_KEY] = ModelKindName.INCREMENTAL_BY_UNIQUE_KEY
     unique_key: t.List[str]
 
-    @validator("unique_key", pre=True)
+    @pydantic_field_validator("unique_key", mode="before")
     def _parse_unique_key(cls, v: t.Any) -> t.List[str]:
         if isinstance(v, exp.Identifier):
             return [v.this]
@@ -242,10 +251,10 @@ class IncrementalByUniqueKeyKind(_Incremental):
 
 
 class ViewKind(ModelKind):
-    name: ModelKindName = Field(ModelKindName.VIEW, const=True)
+    name: Literal[ModelKindName.VIEW] = ModelKindName.VIEW
     materialized: bool = False
 
-    @validator("materialized", pre=True)
+    @pydantic_field_validator("materialized", mode="before")
     def _parse_materialized(cls, v: t.Any) -> bool:
         if isinstance(v, exp.Expression):
             return bool(v.this)
@@ -253,11 +262,11 @@ class ViewKind(ModelKind):
 
 
 class SeedKind(ModelKind):
-    name: ModelKindName = Field(ModelKindName.SEED, const=True)
+    name: Literal[ModelKindName.SEED] = ModelKindName.SEED
     path: str
     batch_size: int = 1000
 
-    @validator("batch_size", pre=True)
+    @pydantic_field_validator("batch_size", mode="before")
     def _parse_batch_size(cls, v: t.Any) -> int:
         if isinstance(v, exp.Expression) and v.is_int:
             v = int(v.name)
@@ -267,7 +276,8 @@ class SeedKind(ModelKind):
             raise ValueError("Seed batch size must be a positive integer")
         return v
 
-    @validator("path", pre=True)
+    @pydantic_field_validator("path", mode="before")
+    @classmethod
     def _parse_path(cls, v: t.Any) -> str:
         if isinstance(v, exp.Literal):
             return v.this

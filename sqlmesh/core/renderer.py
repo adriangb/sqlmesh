@@ -5,6 +5,8 @@ import typing as t
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from typing_extensions import Annotated
+from pydantic import Field
 
 from sqlglot import exp, parse_one
 from sqlglot.errors import SqlglotError
@@ -213,7 +215,7 @@ class QueryRenderer(ExpressionRenderer):
         dialect: str,
         macro_definitions: t.List[d.MacroDef],
         schema: t.Optional[t.Dict[str, t.Any]] = None,
-        model_name: t.Optional[str] = None,
+        name_of_model: Annotated[t.Optional[str], Field(alias='model_name')] = None,
         path: Path = Path(),
         jinja_macro_registry: t.Optional[JinjaMacroRegistry] = None,
         python_env: t.Optional[t.Dict[str, Executable]] = None,
@@ -231,7 +233,7 @@ class QueryRenderer(ExpressionRenderer):
             only_latest=only_latest,
         )
 
-        self._model_name = model_name
+        self._model_name = name_of_model
         self._time_column = time_column
         self._time_converter = time_converter or (lambda v: exp.convert(v))
 

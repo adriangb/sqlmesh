@@ -183,9 +183,11 @@ def test_load_config_from_env():
             "SQLMESH__GATEWAY__CONNECTION__DATABASE": "test_db",
         },
     ):
-        assert load_config_from_env() == Config(
+        loaded = load_config_from_env().model_dump(exclude_unset=True)
+        actual = Config(
             gateways=GatewayConfig(connection=DuckDBConnectionConfig(database="test_db"))
-        )
+        ).model_dump(exclude_unset=True)
+        assert loaded == actual
 
 
 def test_load_config_from_env_invalid_variable_name():

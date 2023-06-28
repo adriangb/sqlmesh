@@ -65,7 +65,7 @@ def load_config_from_paths(
 
 def load_config_from_yaml(path: Path) -> Config:
     config_dict = yaml_load(path)
-    return Config.parse_obj(config_dict)
+    return Config.model_validate(config_dict)
 
 
 def load_config_from_python_module(module_path: Path, config_name: str = "config") -> Config:
@@ -105,4 +105,4 @@ def load_config_from_env() -> Config:
                 target_dict = target_dict[config_key]
             target_dict[segments[-1]] = value
 
-    return Config.parse_obj(config_dict)
+    return Config.model_validate(config_dict)

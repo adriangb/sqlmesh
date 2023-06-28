@@ -492,7 +492,7 @@ def test_fingerprint_jinja_macros(model: Model):
 def test_fingerprint_builtin_audits(model: Model, parent_model: Model):
     fingerprint = fingerprint_from_model(model, models={})
 
-    model = SqlModel.parse_obj(
+    model = SqlModel.model_validate(
         {**model.dict(), "audits": [("unique_values", {"columns": exp.convert([to_column("a")])})]}
     )
     new_fingerprint = fingerprint_from_model(model, models={})

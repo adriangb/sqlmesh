@@ -6,7 +6,7 @@ import typing as t
 from collections import defaultdict
 
 from jinja2 import Environment, Template, nodes
-from pydantic import validator
+from pydantic import field_validator
 from sqlglot import Dialect, Parser, TokenType
 
 from sqlmesh.utils import AttributeDict
@@ -24,7 +24,7 @@ ENVIRONMENT = environment()
 
 
 class MacroReference(PydanticModel, frozen=True):
-    package: t.Optional[str]
+    package: t.Optional[str] = None
     name: str
 
     @property
@@ -177,7 +177,8 @@ class JinjaMacroRegistry(PydanticModel):
     _parser_cache: t.Dict[t.Tuple[t.Optional[str], str], Template] = {}
     __environment: t.Optional[Environment] = None
 
-    @validator("global_objs", pre=True)
+    @field_validator("global_objs", mode="before")
+    @classmethod
     def _validate_attribute_dict(cls, value: t.Any) -> t.Any:
         def _attribute_dict(val: t.Dict[str, t.Any]) -> AttributeDict:
             return AttributeDict(
@@ -319,7 +320,7 @@ class JinjaMacroRegistry(PydanticModel):
         )
 
     def __deepcopy__(self, memo: t.Dict[int, t.Any]) -> JinjaMacroRegistry:
-        return JinjaMacroRegistry.parse_obj(self.dict())
+        return JinjaMacroRegistry.model_validate(self.dict(), from_attributes=True)
 
     def _parse_macro(self, name: str, package: t.Optional[str]) -> Template:
         cache_key = (package, name)

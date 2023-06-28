@@ -5,7 +5,7 @@ import typing as t
 from enum import Enum
 from pathlib import Path
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 import sqlmesh.core.dialect as d
 from sqlmesh.core.audit import Audit
@@ -71,13 +71,15 @@ class TestConfig(GeneralConfig):
     warn_if: str = "!=0"
     error_if: str = "!=0"
 
-    @validator("severity", pre=True)
+    @field_validator("severity", mode="before")
+    @classmethod
     def _validate_severity(cls, v: t.Union[Severity, str]) -> Severity:
         if isinstance(v, Severity):
             return v
         return Severity(v.lower())
 
-    @validator("name", pre=True)
+    @field_validator("name", mode="before")
+    @classmethod
     def _lowercase_name(cls, v: str) -> str:
         return v.lower()
 

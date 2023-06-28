@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import validator
+from pydantic import field_validator
 from sqlglot import exp, parse_one
 from sqlglot.helper import ensure_list
 
@@ -64,6 +64,7 @@ class ColumnConfig(GeneralConfig):
     data_type: t.Optional[str] = None
     quote: t.Optional[bool] = False
 
-    @validator("quote", pre=True)
+    @field_validator("quote", mode="before")
+    @classmethod
     def _validate_bool(cls, v: str) -> bool:
         return ensure_bool(v)

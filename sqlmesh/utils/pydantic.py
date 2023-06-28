@@ -1,30 +1,39 @@
 import typing as t
+from typing_extensions import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, PlainSerializer, InstanceOf
+from pydantic.fields import FieldInfo
 from sqlglot import exp
 
 DEFAULT_ARGS = {"exclude_none": True, "by_alias": True}
 
 
+Expression = Annotated[
+    exp.Expression,
+    InstanceOf,
+    PlainSerializer(lambda exp: exp.sql()),
+]
+
+
 class PydanticModel(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
-        json_encoders = {exp.Expression: lambda e: e.sql()}
-        underscore_attrs_are_private = True
-        smart_union = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="forbid",
+        protected_namespaces=(),
+        validate_default=True,
+    )
 
     def dict(
         self,
         **kwargs: t.Any,
     ) -> t.Dict[str, t.Any]:
-        return super().dict(**{**DEFAULT_ARGS, **kwargs})  # type: ignore
+        return super().model_dump(**{**DEFAULT_ARGS, **kwargs})  # type: ignore
 
     def json(
         self,
         **kwargs: t.Any,
     ) -> str:
-        return super().json(**{**DEFAULT_ARGS, **kwargs})  # type: ignore
+        return super().model_dump_json(**{**DEFAULT_ARGS, **kwargs})  # type: ignore
 
     @classmethod
     def missing_required_fields(
@@ -42,15 +51,15 @@ class PydanticModel(BaseModel):
 
     @classmethod
     def required_fields(cls: t.Type["PydanticModel"]) -> t.Set[str]:
-        return cls._fields(lambda field: field.required)
+        return cls._fields(lambda field: field.is_required())
 
     @classmethod
     def _fields(
         cls: t.Type["PydanticModel"],
-        predicate: t.Callable[[t.Any], bool] = lambda _: True,
+        predicate: t.Callable[[FieldInfo], bool] = lambda _: True,
     ) -> t.Set[str]:
         return {
-            field.alias if field.alias else field.name
-            for field in cls.__fields__.values()
+            field.alias if field.alias else field_name
+            for field_name, field in cls.model_fields.items()
             if predicate(field)
         }

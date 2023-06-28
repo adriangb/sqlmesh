@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Depends
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from sqlmesh.core.context import Context
 from web.server.exceptions import ApiException

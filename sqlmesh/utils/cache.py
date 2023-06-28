@@ -73,7 +73,7 @@ class FileCache(t.Generic[T]):
         if cache_entry_path.exists():
             with gzip.open(cache_entry_path, "rb") as fd:
                 try:
-                    return self._entry_class.parse_obj(pickle.load(fd))
+                    return self._entry_class.model_validate(pickle.load(fd))
                 except Exception as ex:
                     logger.warning("Failed to load a cache entry '%s': %s", name, ex)
 

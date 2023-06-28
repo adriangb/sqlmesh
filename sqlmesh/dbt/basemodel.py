@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 
 from dbt.contracts.relation import RelationType
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from sqlglot.helper import ensure_list
 
 from sqlmesh.core import dialect as d
@@ -102,7 +102,8 @@ class BaseModelConfig(GeneralConfig):
     columns: t.Dict[str, ColumnConfig] = {}
     quoting: QuotingConfig = Field(default_factory=QuotingConfig)
 
-    @validator("pre_hook", "post_hook", pre=True)
+    @field_validator("pre_hook", "post_hook", mode="before")
+    @classmethod
     def _validate_hooks(cls, v: t.Union[str, t.List[t.Union[SqlStr, str]]]) -> t.List[Hook]:
         hooks = []
         for hook in ensure_list(v):
@@ -117,16 +118,16 @@ class BaseModelConfig(GeneralConfig):
 
         return hooks
 
-    @validator("full_refresh", pre=True)
+    @field_validator("full_refresh", mode="before")
     def _validate_bool(cls, v: str) -> bool:
         return ensure_bool(v)
 
-    @validator("grants", pre=True)
+    @field_validator("grants", mode="before")
     def _validate_grants(cls, v: t.Dict[str, str]) -> t.Dict[str, t.List[str]]:
         return {key: ensure_list(value) for key, value in v.items()}
 
     _FIELD_UPDATE_STRATEGY: t.ClassVar[t.Dict[str, UpdateStrategy]] = {
-        **GeneralConfig._FIELD_UPDATE_STRATEGY,
+        **GeneralConfig._FIELD_UPDATE_STRATEGY.default,
         **{
             "grants": UpdateStrategy.KEY_EXTEND,
             "path": UpdateStrategy.IMMUTABLE,

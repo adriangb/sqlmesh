@@ -4,7 +4,7 @@ import abc
 import sys
 import typing as t
 
-from pydantic import Field, root_validator, validator
+from pydantic import Field, field_validator, model_validator
 
 from sqlmesh.core.config.connection import (
     BigQueryConnectionConfig,
@@ -201,7 +201,8 @@ class PostgresConfig(TargetConfig):
     role: t.Optional[str] = None
     sslmode: t.Optional[str] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_database(
         cls, values: t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]
     ) -> t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]:
@@ -210,7 +211,8 @@ class PostgresConfig(TargetConfig):
             raise ConfigError("Either database or dbname must be set")
         return values
 
-    @validator("port")
+    @field_validator("port")
+    @classmethod
     def _validate_port(cls, v: t.Union[int, str]) -> int:
         return int(v)
 
@@ -262,7 +264,8 @@ class RedshiftConfig(TargetConfig):
     search_path: t.Optional[str] = None
     sslmode: t.Optional[str] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_database(
         cls, values: t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]
     ) -> t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]:
@@ -361,7 +364,8 @@ class BigQueryConfig(TargetConfig):
     priority: BigQueryPriority = BigQueryPriority.INTERACTIVE
     maximum_bytes_billed: t.Optional[int] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_fields(
         cls, values: t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]
     ) -> t.Dict[str, t.Union[t.Tuple[str, ...], t.Optional[str], t.Dict[str, t.Any]]]:

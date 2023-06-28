@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from collections import defaultdict
 from enum import Enum
+from pydantic import Field
 
 from sqlmesh.core import scheduler
 from sqlmesh.core.config import CategorizerConfig
@@ -596,7 +597,7 @@ class SnapshotIntervals(PydanticModel, frozen=True):
 
 class LoadedSnapshotIntervals(SnapshotIntervals):
     interval_unit: t.Optional[IntervalUnit]
-    model_name: str
+    name_of_model: t.Annotated[str, Field(alias='model_name')]
     view_name: str
     change_category: SnapshotChangeCategory
 
@@ -609,7 +610,7 @@ class LoadedSnapshotIntervals(SnapshotIntervals):
             if snapshot.change_category.is_forward_only
             else snapshot.intervals,
             interval_unit=snapshot.model.interval_unit(),
-            model_name=snapshot.model.name,
+            name_of_model=snapshot.model.name,
             view_name=snapshot.model.view_name,
             change_category=snapshot.change_category,
         )

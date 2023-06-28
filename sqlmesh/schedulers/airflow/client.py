@@ -95,13 +95,13 @@ class AirflowClient:
 
         flags = ["hydrate_seeds"] if hydrate_seeds else []
 
-        return common.SnapshotsResponse.parse_obj(
+        return common.SnapshotsResponse.model_validate(
             self._get(SNAPSHOTS_PATH, *flags, **params)
         ).snapshots
 
     def snapshots_exist(self, snapshot_ids: t.List[SnapshotId]) -> t.Set[SnapshotId]:
         return set(
-            common.SnapshotIdsResponse.parse_obj(
+            common.SnapshotIdsResponse.model_validate(
                 self._get(SNAPSHOTS_PATH, "check_existence", ids=_list_to_json(snapshot_ids))
             ).snapshot_ids
         )
@@ -109,7 +109,7 @@ class AirflowClient:
     def models_exist(self, names: t.Iterable[str], exclude_external: bool = False) -> t.Set[str]:
         flags = ["exclude_external"] if exclude_external else []
         return set(
-            common.ExistingModelsResponse.parse_obj(
+            common.ExistingModelsResponse.model_validate(
                 self._get(MODELS_PATH, *flags, names=",".join(names))
             ).names
         )
@@ -117,20 +117,20 @@ class AirflowClient:
     def get_snapshot_intervals(
         self, snapshot_name_versions: t.List[SnapshotNameVersion]
     ) -> t.List[SnapshotIntervals]:
-        return common.SnapshotIntervalsResponse.parse_obj(
+        return common.SnapshotIntervalsResponse.model_validate(
             self._get(INTERVALS_PATH, versions=_list_to_json(snapshot_name_versions))
         ).snapshot_intervals
 
     def get_environment(self, environment: str) -> t.Optional[Environment]:
         try:
             response = self._get(f"{ENVIRONMENTS_PATH}/{environment}")
-            return Environment.parse_obj(response)
+            return Environment.model_validate(response)
         except NotFoundError:
             return None
 
     def get_environments(self) -> t.List[Environment]:
         response = self._get(ENVIRONMENTS_PATH)
-        return common.EnvironmentsResponse.parse_obj(response).environments
+        return common.EnvironmentsResponse.model_validate(response).environments
 
     def invalidate_environment(self, environment: str) -> None:
         response = self._session.delete(
@@ -139,7 +139,7 @@ class AirflowClient:
         self._raise_for_status(response)
 
     def get_versions(self) -> Versions:
-        return Versions.parse_obj(self._get(VERSIONS_PATH))
+        return Versions.model_validate(self._get(VERSIONS_PATH))
 
     def get_dag_run_state(self, dag_id: str, dag_run_id: str) -> str:
         url = f"{DAG_RUN_PATH_TEMPLATE.format(dag_id)}/{dag_run_id}"

@@ -3,9 +3,10 @@ from __future__ import annotations
 import typing as t
 from enum import Enum
 
-from pydantic import Field, root_validator, validator
+from pydantic import Field, FieldValidationInfo, field_validator, model_validator
 from sqlglot import exp
 from sqlglot.helper import ensure_list
+from typing_extensions import Self
 
 from sqlmesh.core import dialect as d
 from sqlmesh.core.model.kind import (
@@ -18,7 +19,7 @@ from sqlmesh.core.model.kind import (
 from sqlmesh.utils.cron import CroniterCache
 from sqlmesh.utils.date import TimeLike, to_datetime
 from sqlmesh.utils.errors import ConfigError
-from sqlmesh.utils.pydantic import PydanticModel
+from sqlmesh.utils.pydantic import Expression, PydanticModel
 
 
 class IntervalUnit(str, Enum):
@@ -50,17 +51,17 @@ class ModelMeta(PydanticModel):
     name: str
     kind: ModelKind = ViewKind()
     cron: str = "@daily"
-    owner: t.Optional[str]
-    description: t.Optional[str]
-    stamp: t.Optional[str]
-    start: t.Optional[TimeLike]
-    retention: t.Optional[int]  # not implemented yet
-    storage_format: t.Optional[str]
-    partitioned_by_: t.List[exp.Expression] = Field(default=[], alias="partitioned_by")
+    owner: t.Optional[str] = None
+    description: t.Optional[str] = None
+    stamp: t.Optional[str] = None
+    start: t.Optional[TimeLike] = None
+    retention: t.Optional[int] = None  # not implemented yet
+    storage_format: t.Optional[str] = None
+    partitioned_by_: t.List[Expression] = Field(default=[], alias="partitioned_by")
     clustered_by: t.List[str] = []
     depends_on_: t.Optional[t.Set[str]] = Field(default=None, alias="depends_on")
     columns_to_types_: t.Optional[t.Dict[str, exp.DataType]] = Field(default=None, alias="columns")
-    column_descriptions_: t.Optional[t.Dict[str, str]]
+    column_descriptions_: t.Optional[t.Dict[str, str]] = None
     audits: t.List[AuditReference] = []
     tags: t.List[str] = []
     grain: t.List[str] = []
@@ -71,11 +72,14 @@ class ModelMeta(PydanticModel):
 
     _model_kind_validator = ModelKind.field_validator()
 
-    @validator("name", pre=True)
-    def _name_validator(cls, v: t.Any, values: t.Dict[str, t.Any]) -> str:
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name_validator(cls, v: t.Any, info: FieldValidationInfo) -> str:
+        values = info.data
         return d.normalize_model_name(v, dialect=values.get("dialect"))
 
-    @validator("audits", pre=True)
+    @field_validator("audits", mode="before")
+    @classmethod
     def _audits_validator(cls, v: t.Any) -> t.Any:
         def extract(v: exp.Expression) -> t.Tuple[str, t.Dict[str, str]]:
             kwargs = {}
@@ -116,7 +120,8 @@ class ModelMeta(PydanticModel):
             ]
         return v
 
-    @validator("clustered_by", "tags", "grain", pre=True)
+    @field_validator("clustered_by", "tags", "grain", mode="before")
+    @classmethod
     def _value_or_tuple_validator(cls, v: t.Any) -> t.Any:
         if isinstance(v, (exp.Tuple, exp.Array)):
             return [e.name for e in v.expressions]
@@ -124,13 +129,15 @@ class ModelMeta(PydanticModel):
             return [v.name]
         return v
 
-    @validator("dialect", "owner", "storage_format", "description", "stamp", pre=True)
+    @field_validator("dialect", "owner", "storage_format", "description", "stamp", mode="before")
+    @classmethod
     def _string_validator(cls, v: t.Any) -> t.Optional[str]:
         if isinstance(v, exp.Expression):
             return v.name
         return str(v) if v is not None else None
 
-    @validator("cron", pre=True)
+    @field_validator("cron", mode="before")
+    @classmethod
     def _cron_validator(cls, v: t.Any) -> t.Optional[str]:
         cron = cls._string_validator(v)
         if cron:
@@ -142,10 +149,11 @@ class ModelMeta(PydanticModel):
                 raise ConfigError(f"Invalid cron expression '{cron}'")
         return cron
 
-    @validator("partitioned_by_", pre=True)
-    def _partition_by_validator(
-        cls, v: t.Any, values: t.Dict[str, t.Any]
-    ) -> t.List[exp.Expression]:
+    @field_validator("partitioned_by_", mode="before")
+    @classmethod
+    def _partition_by_validator(cls, v: t.Any, info: FieldValidationInfo) -> t.List[exp.Expression]:
+        values = info.data
+
         partitions: t.List[exp.Expression]
         if isinstance(v, (exp.Tuple, exp.Array)):
             partitions = v.expressions
@@ -175,10 +183,12 @@ class ModelMeta(PydanticModel):
 
         return partitions
 
-    @validator("columns_to_types_", pre=True)
+    @field_validator("columns_to_types_", mode="before")
+    @classmethod
     def _columns_validator(
-        cls, v: t.Any, values: t.Dict[str, t.Any]
+        cls, v: t.Any, info: FieldValidationInfo
     ) -> t.Optional[t.Dict[str, exp.DataType]]:
+        values = info.data
         if isinstance(v, exp.Schema):
             return {column.name: column.args["kind"] for column in v.expressions}
         if isinstance(v, dict):
@@ -188,8 +198,11 @@ class ModelMeta(PydanticModel):
             }
         return v
 
-    @validator("depends_on_", pre=True)
-    def _depends_on_validator(cls, v: t.Any, values: t.Dict[str, t.Any]) -> t.Optional[t.Set[str]]:
+    @field_validator("depends_on_", mode="before")
+    @classmethod
+    def _depends_on_validator(cls, v: t.Any, info: FieldValidationInfo) -> t.Optional[t.Set[str]]:
+        values = info.data
+
         dialect = values.get("dialect")
 
         if isinstance(v, (exp.Array, exp.Tuple)):
@@ -204,7 +217,8 @@ class ModelMeta(PydanticModel):
 
         return v
 
-    @validator("start", pre=True)
+    @field_validator("start", mode="before")
+    @classmethod
     def _date_validator(cls, v: t.Any) -> t.Optional[TimeLike]:
         if isinstance(v, exp.Expression):
             v = v.name
@@ -212,15 +226,15 @@ class ModelMeta(PydanticModel):
             raise ConfigError(f"'{v}' needs to be time-like: https://pypi.org/project/dateparser")
         return v
 
-    @root_validator
-    def _kind_validator(cls, values: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
-        kind = values.get("kind")
+    @model_validator(mode="after")
+    def _kind_validator(self: Self) -> Self:
+        kind = self.kind
         if kind:
             for field in ("partitioned_by_", "clustered_by"):
-                if values.get(field) and not kind.is_materialized:
+                if getattr(self, field) and not kind.is_materialized:
                     raise ValueError(f"{field} field cannot be set for {kind} models")
 
-        return values
+        return self
 
     @property
     def time_column(self) -> t.Optional[TimeColumn]:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import validator
+from pydantic import field_validator
 from sqlglot import exp
 from sqlglot.helper import seq_get, split_num_words
 
@@ -48,12 +48,11 @@ def parse_expression(
     return v
 
 
-expression_validator = validator(
+expression_validator = field_validator(
     "query",
     "expressions_",
     "pre_statements_",
     "post_statements_",
-    pre=True,
-    allow_reuse=True,
+    mode='before',
     check_fields=False,
 )(parse_expression)

@@ -314,7 +314,7 @@ class EngineAdapterStateSync(CommonStateSyncMixin, StateSync):
         ]
 
     def _environment_from_row(self, row: t.Tuple[str, ...]) -> Environment:
-        return Environment(**{field: row[i] for i, field in enumerate(Environment.__fields__)})
+        return Environment(**{field: row[i] for i, field in enumerate(Environment.model_fields)})
 
     def _environments_query(
         self,
@@ -322,7 +322,7 @@ class EngineAdapterStateSync(CommonStateSyncMixin, StateSync):
         lock_for_update: bool = False,
     ) -> exp.Select:
         query = (
-            exp.select(*(exp.to_identifier(field) for field in Environment.__fields__))
+            exp.select(*(exp.to_identifier(field) for field in Environment.model_fields))
             .from_(self.environments_table)
             .where(where)
         )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import validator
+from pydantic import field_validator
 from sqlglot import exp
 from sqlglot.helper import ensure_list
 
@@ -85,19 +85,22 @@ class ModelConfig(BaseModelConfig):
     _sql_embedded_config: t.Optional[SqlStr] = None
     _sql_no_config: t.Optional[SqlStr] = None
 
-    @validator(
+    @field_validator(
         "unique_key",
         "cluster_by",
-        pre=True,
+        mode="before",
     )
+    @classmethod
     def _validate_list(cls, v: t.Union[str, t.List[str]]) -> t.List[str]:
         return ensure_list(v)
 
-    @validator("sql", pre=True)
+    @field_validator("sql", mode="before")
+    @classmethod
     def _validate_sql(cls, v: t.Union[str, SqlStr]) -> SqlStr:
         return SqlStr(v)
 
-    @validator("partition_by", pre=True)
+    @field_validator("partition_by", mode="before")
+    @classmethod
     def _validate_partition_by(cls, v: t.Any) -> t.Union[t.List[str], t.Dict[str, t.Any]]:
         if isinstance(v, str):
             return [v]
@@ -110,7 +113,7 @@ class ModelConfig(BaseModelConfig):
         raise ConfigError(f"Invalid format for partition_by '{v}'")
 
     _FIELD_UPDATE_STRATEGY: t.ClassVar[t.Dict[str, UpdateStrategy]] = {
-        **BaseModelConfig._FIELD_UPDATE_STRATEGY,
+        **BaseModelConfig._FIELD_UPDATE_STRATEGY.default,
         **{
             "sql": UpdateStrategy.IMMUTABLE,
             "time_column": UpdateStrategy.IMMUTABLE,

@@ -160,24 +160,24 @@ class _Model(ModelMeta, frozen=True):
         """
         expressions = []
         comment = None
-        for field in ModelMeta.__fields__.values():
-            field_value = getattr(self, field.name)
+        for field_name, field in ModelMeta.model_fields.items():
+            field_value = getattr(self, field_name)
 
             if field_value != field.default:
-                if field.name == "description":
+                if field_name == "description":
                     comment = field_value
-                elif field.name == "kind":
+                elif field_name == "kind":
                     expressions.append(
                         exp.Property(
                             this="kind",
                             value=field_value.to_expression(dialect=self.dialect),
                         )
                     )
-                elif field.name != "column_descriptions_":
+                elif field_name != "column_descriptions_":
                     expressions.append(
                         exp.Property(
-                            this=field.alias or field.name,
-                            value=META_FIELD_CONVERTER.get(field.name, exp.to_identifier)(
+                            this=field.alias or field_name,
+                            value=META_FIELD_CONVERTER.get(field_name, exp.to_identifier)(
                                 field_value
                             ),
                         )
@@ -888,7 +888,7 @@ class SqlModel(_SqlBasedModel):
                 self.dialect,
                 self.macro_definitions,
                 schema=self.mapping_schema,
-                model_name=self.name,
+                name_of_model=self.name,
                 path=self._path,
                 jinja_macro_registry=self.jinja_macros,
                 python_env=self.python_env,

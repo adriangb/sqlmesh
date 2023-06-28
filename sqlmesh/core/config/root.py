@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import root_validator, validator
+from pydantic import field_validator, model_validator
 
 from sqlmesh.core import constants as c
 from sqlmesh.core._typing import NotificationTarget
@@ -66,7 +66,8 @@ class Config(BaseConfig):
         "auto_categorize_changes": UpdateStrategy.NESTED_UPDATE,
     }
 
-    @validator("gateways", always=True)
+    @field_validator("gateways", mode="before")
+    @classmethod
     def _gateways_ensure_dict(
         cls, value: t.Union[t.Dict[str, GatewayConfig], GatewayConfig]
     ) -> t.Dict[str, GatewayConfig]:
@@ -74,7 +75,8 @@ class Config(BaseConfig):
             return {"": value}
         return value
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def _normalize_fields(cls, values: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
         if "gateways" not in values and "gateway" in values:
             values["gateways"] = values.pop("gateway")

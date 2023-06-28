@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import validator
-
+from pydantic import field_validator
 from sqlmesh.utils.errors import ConfigError
 
 
@@ -17,12 +16,11 @@ def _concurrent_tasks_validator(v: t.Any) -> int:
     return v
 
 
-concurrent_tasks_validator = validator(
+concurrent_tasks_validator = field_validator(
     "backfill_concurrent_tasks",
     "ddl_concurrent_tasks",
     "concurrent_tasks",
-    pre=True,
-    allow_reuse=True,
+    mode='before',
     check_fields=False,
 )(_concurrent_tasks_validator)
 
@@ -33,9 +31,8 @@ def _http_headers_validator(v: t.Any) -> t.Any:
     return v
 
 
-http_headers_validator = validator(
+http_headers_validator = field_validator(
     "http_headers",
-    pre=True,
-    allow_reuse=True,
+    mode='before',
     check_fields=False,
 )(_http_headers_validator)

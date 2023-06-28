@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import typing as t
 
-from pydantic import validator
+from pydantic import field_validator
 
 from sqlmesh.core.snapshot import SnapshotTableInfo
 from sqlmesh.utils import word_characters_only
@@ -26,14 +26,14 @@ class Environment(PydanticModel):
     expiration_ts: t.Optional[int]
     finalized_ts: t.Optional[int]
 
-    @validator("snapshots", pre=True)
+    @field_validator("snapshots", mode="before")
     @classmethod
     def _convert_snapshots(cls, v: str | t.List[SnapshotTableInfo]) -> t.List[SnapshotTableInfo]:
         if isinstance(v, str):
-            return [SnapshotTableInfo.parse_obj(obj) for obj in json.loads(v)]
+            return [SnapshotTableInfo.model_validate(obj) for obj in json.loads(v)]
         return v
 
-    @validator("name", pre=True)
+    @field_validator("name", mode="before")
     @classmethod
     def _normalize_name(cls, v: str) -> str:
         return word_characters_only(v).lower()

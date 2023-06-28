@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import IntEnum
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from sqlglot.helper import seq_get
 
 from sqlmesh.core import constants as c
@@ -177,7 +177,7 @@ class QualifiedViewName(PydanticModel, frozen=True):
         return schema
 
 
-class SnapshotInfoMixin(ModelKindMixin):
+class SnapshotInfoMixin(PydanticModel, ModelKindMixin):
     name: str
     temp_version: t.Optional[str]
     change_category: t.Optional[SnapshotChangeCategory]
@@ -268,7 +268,7 @@ class SnapshotInfoMixin(ModelKindMixin):
         )
 
 
-class SnapshotTableInfo(PydanticModel, SnapshotInfoMixin, frozen=True):
+class SnapshotTableInfo(SnapshotInfoMixin, frozen=True):
     name: str
     fingerprint: SnapshotFingerprint
     version: str
@@ -317,7 +317,7 @@ class SnapshotTableInfo(PydanticModel, SnapshotInfoMixin, frozen=True):
         return self.kind_name
 
 
-class Snapshot(PydanticModel, SnapshotInfoMixin):
+class Snapshot(SnapshotInfoMixin):
     """A snapshot represents a model at a certain point in time.
 
     Snapshots are used to encapsulate everything needed to evaluate a model.
@@ -377,7 +377,7 @@ class Snapshot(PydanticModel, SnapshotInfoMixin):
     effective_from: t.Optional[TimeLike] = None
     _start: t.Optional[datetime] = None
 
-    @validator("ttl")
+    @field_validator("ttl")
     @classmethod
     def _time_delta_must_be_positive(cls, v: str) -> str:
         current_time = now()
